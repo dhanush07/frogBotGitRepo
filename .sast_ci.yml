@@ -1,0 +1,9 @@
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+
+stages:
+  - sast
+
+sast:
+  tags:
+    - docker-dind

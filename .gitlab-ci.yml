@@ -1,0 +1,71 @@
+image: maven:3.6.3-openjdk-17-slim
+services:
+  - registry2.highradius.com/hrc-product-db:latest
+stages:
+  - scanning
+
+frogbot-scan:
+  stage: scanning
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      when: always
+      variables:
+        FROGBOT_CMD: "scan-pull-request"
+        JF_GIT_BASE_BRANCH: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "schedule"
+      variables:
+        FROGBOT_CMD: "scan-repository"
+        JF_GIT_BASE_BRANCH: $CI_COMMIT_BRANCH
+
+  variables:
+    JF_URL: https://advsecurity.jfrog.io/
+    JF_USER: rachamalla.s@highradius.com
+    JF_ACCESS_TOKEN: "eyJ2ZXIiOiIyIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYiLCJraWQiOiJHOThGdDluTU02ck0wT0NLLXlNMjJOb3lQMkkyNE8tRUp3VkN3aTZFUllBIn0.eyJzdWIiOiJqZmFjQDAxaHoyMTJjMXJtNmpzMDF5NW5yNngwZXJoL3VzZXJzL3JhY2hhbWFsbGEucyIsInNjcCI6ImFwcGxpZWQtcGVybWlzc2lvbnMvYWRtaW4iLCJhdWQiOiIqQCoiLCJpc3MiOiJqZmZlQDAxaHoyMTJjMXJtNmpzMDF5NW5yNngwZXJoIiwiaWF0IjoxNzE3NTc3NTc3LCJqdGkiOiJiMTgxY2NhNy0xMTBhLTRhOWMtOGZmZS1mZWE0MGUxYWU2NzgifQ.DZ5n9uvhS8JuUfNuC_AqoWsude8RXXxuNR4vsx5cgZSu3AMuL86qlAeieNYODmHRnrbuCpZWUdlemrymedjdn8NyO3xcFGQmgHS3LEmRiqzm5ERRu4uiHnr6wmzkMd83pOGYKAEY2qwLDCpNC5NzkhwIg1TeIK71R-Sb9qud-sVJmV4qpktaBq-UtTnsjPNMJ44eF0EYC4gE-a74e8fZIsjK-pMxXC4b4S-RKiVUsKGO-XYoEbZgnQUBqDV8UkOQWmDC4DgdOGIQBIyDr5QFPQR-wBHpQQtO-xjLk3xeisocezXIiQ8ud4EuViUhsEhmzSG9rPQKOErhns-YDwzuaw"
+    JF_GIT_TOKEN: glpat-M-GiWyPVtihS8zgm5JRM
+    JF_GIT_PROVIDER: gitlab
+    JF_GIT_OWNER: $CI_PROJECT_NAMESPACE
+    JF_GIT_REPO: $CI_PROJECT_NAME
+    JF_GIT_PULL_REQUEST_ID: $CI_MERGE_REQUEST_IID
+    JF_GIT_API_ENDPOINT: https://git.highradius.com
+    # [Mandatory if the two conditions below are met]
+    # 1. The project uses yarn 2, NuGet, or .NET to download its dependencies
+    # 2. The `installCommand` variable isn't set in your frogbot-config.yml file.
+    # The command that installs the project dependencies (e.g "nuget restore")
+    JF_INSTALL_DEPS_CMD: "mvn clean install"
+
+    # [Optional, default: "."]
+    # Relative path to the root of the project in the Git repository
+    # JF_WORKING_DIR: path/to/project/dir
+
+    # [Default: "*.git*;*node_modules*;*target*;*venv*;*test*"]
+    # List of exclusion patterns (utilizing wildcards) for excluding paths in the source code of the Git repository during SCA scans.
+    # JF_PATH_EXCLUSIONS: "*.git*;*node_modules*;*target*;*venv*;*test*"
+
+    # [Optional, default: "FALSE"]
+    # Displays all existing vulnerabilities, including the ones that were added by the pull request.
+    JF_INCLUDE_ALL_VULNERABILITIES: "TRUE"
+    JF_FAIL: "TRUE"
+
+    # [Optional]
+    # Relative path to a Pip requirements.txt file. If not set, the Python project's dependencies are determined and scanned using the project setup.py file.
+    # JF_REQUIREMENTS_FILE: ""
+
+    # [Optional]
+    # Frogbot will download the project dependencies if they're not cached locally. To download the
+    # dependencies from a virtual repository in Artifactory, set the name of the repository. There's no
+    # need to set this value, if it is set in the frogbot-config.yml file.
+    JF_DEPS_REPO: "libs-release"
+
+
+    # [Optional, Default: eco-system+frogbot@jfrog.com]
+    # Set the email of the commit author
+    # JF_GIT_EMAIL_AUTHOR: ""
+    
+    JF_EMAIL_RECEIVERS: "rachamalla.s@highradius.com"
+
+  script:
+    - curl -fLg "https://releases.jfrog.io/artifactory/frogbot/v2/[RELEASE]/getFrogbot.sh" | sh
+    - ./frogbot ${FROGBOT_CMD}  
+  tags:
+    - docker-dind
+
